@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import {GoogleGenAI} from '@google/genai'
-import {limitFunction} from 'p-limit'
+import pLimit from 'p-limit'
 
 const timeoutMs = 60_000
 const maxRetries = 3
@@ -36,8 +36,10 @@ const generateWithRetry = async generationFn => {
   }
 }
 
-export default limitFunction(
-  async ({
+const limit = pLimit(8);
+
+export default (options) => limit(async () => {
+  const {
     model,
     systemInstruction,
     prompt,
@@ -48,66 +50,65 @@ export default limitFunction(
     topK,
     responseSchema,
     tools,
-  }) => {
-    if (imageOutput) {
-      const res = await generateWithRetry(() =>
-        ai.models.generateImages({
-          model,
-          prompt,
-          config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/png',
-            aspectRatio: '4:3'
-          }
-        })
-      )
-      const base64ImageBytes = res.generatedImages[0].image.imageBytes;
-      // This is a special case where we can't return the full response object
-      // because the response format for image generation is different.
-      // We will create a mock response object that has a .text property
-      // with the base64 string, so the rest of the app can handle it.
-      return { text: `data:image/png;base64,${base64ImageBytes}` };
-    } else {
-      const contents = {
-        parts: [
-          ...(promptImage
-            ? [
-                {
-                  inlineData: {
-                    data: promptImage.split(',')[1],
-                    mimeType: 'image/png'
-                  }
+  } = options;
+
+  if (imageOutput) {
+    const res = await generateWithRetry(() =>
+      ai.models.generateImages({
+        model,
+        prompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/png',
+          aspectRatio: '4:3'
+        }
+      })
+    )
+    const base64ImageBytes = res.generatedImages[0].image.imageBytes;
+    // This is a special case where we can't return the full response object
+    // because the response format for image generation is different.
+    // We will create a mock response object that has a .text property
+    // with the base64 string, so the rest of the app can handle it.
+    return { text: `data:image/png;base64,${base64ImageBytes}` };
+  } else {
+    const contents = {
+      parts: [
+        ...(promptImage
+          ? [
+              {
+                inlineData: {
+                  data: promptImage.split(',')[1],
+                  mimeType: 'image/png'
                 }
-              ]
-            : []),
-          {text: prompt}
-        ]
-      }
-
-      const config = {
-        systemInstruction,
-        safetySettings,
-        temperature,
-        topP,
-        topK
-      }
-
-      if (tools) {
-        config.tools = tools;
-      } else if (responseSchema) {
-        config.responseMimeType = 'application/json';
-        config.responseSchema = responseSchema;
-      }
-
-      const res = await generateWithRetry(() =>
-        ai.models.generateContent({
-          model,
-          contents,
-          config
-        })
-      )
-      return res
+              }
+            ]
+          : []),
+        {text: prompt}
+      ]
     }
-  },
-  {concurrency: 8}
-)
+
+    const config = {
+      systemInstruction,
+      safetySettings,
+      temperature,
+      topP,
+      topK
+    }
+
+    if (tools) {
+      config.tools = tools;
+    } else if (responseSchema) {
+      config.responseMimeType = 'application/json';
+      config.responseSchema = responseSchema;
+    }
+
+    const res = await generateWithRetry(() =>
+      ai.models.generateContent({
+        model,
+        contents,
+        config
+      })
+    )
+    return res
+  }
+});
