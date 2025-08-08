@@ -8,7 +8,7 @@ import pLimit from 'p-limit'
 const timeoutMs = 60_000
 const maxRetries = 3
 const baseDelay = 1_000
-const ai = new GoogleGenAI({apiKey: process.env.API_KEY})
+const ai = new GoogleGenAI({apiKey: import.meta.env.VITE_GEMINI_API_KEY})
 
 const safetySettings = [
   'HARM_CATEGORY_HATE_SPEECH',
