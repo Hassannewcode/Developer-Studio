@@ -15,8 +15,7 @@
     "lodash.shuffle": "latest",
     "p-limit": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "react-dom/client": "latest",
+    "react-dom": "latest",  // <-- THIS IS THE CORRECT ENTRY
     "react-syntax-highlighter": "latest",
     "zustand": "latest",
     "marked": "latest",
