@@ -1,0 +1,6 @@
+{
+  "name": "AI Studio",
+  "description": "A powerful playground to create, test, and share custom AI profiles and prompts.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
